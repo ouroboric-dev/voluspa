@@ -30,6 +30,12 @@ The graph library: one folder per graph, with its stage prompts.
 
 `go test ./...` checks each graph pack, its graph and its prompts against Gungnir's schemas.
 
+## CI
+
+`.github/workflows/ci.yml` has one job, `test`, the required check on `main`. It runs in the Go image of
+the devcontainer, without `go.work`, and runs `gofmt`, `go vet`, `go test -race` as a non-root user, and
+`govulncheck`. The pr-bot cannot change the workflow; the founder pushes changes to it.
+
 ## Source
 
 The v0 engineering spec. When this page and the spec differ, the spec wins.
