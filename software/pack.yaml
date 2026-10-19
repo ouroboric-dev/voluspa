@@ -1,0 +1,6 @@
+# The software graph pack of Voluspa: the graph of a software product (spec §4.2) and the prompts of its stages
+# and reviewers. It holds no recipe; a leaf's stack, implementer prompt, template and checks come from the leaf's
+# pinned realm.
+name: software
+version: 0.1.0
+graph: graph.yaml
