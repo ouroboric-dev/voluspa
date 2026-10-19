@@ -24,4 +24,4 @@ Run `uvx pre-commit install` once after cloning, so `gitleaks` checks each commi
 
 ## Licence
 
-Code is AGPL-3.0-only. `docs/`, this README and `AGENTS.md` are CC-BY-4.0. See `REUSE.toml`.
+Code is AGPL-3.0-only, except the graphs (`software/`), which are MIT. `docs/`, this README and `AGENTS.md` are CC-BY-4.0. See `REUSE.toml`.
