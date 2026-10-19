@@ -13,6 +13,8 @@ go test ./...
 go vet ./...
 ```
 
+The required check `test` runs `gofmt`, `go vet`, `go test -race` as a non-root user, and `govulncheck`.
+
 ## Docs
 
 - Architecture: [docs/architecture.md](docs/architecture.md)
