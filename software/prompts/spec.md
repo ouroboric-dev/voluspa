@@ -41,8 +41,7 @@ model**; **Acceptance criteria per feature**; **Security considerations**; **Tes
 
 ### 2. The leaves: `out/leaves.yaml`
 
-The repositories the product is built in. One leaf for each part that is built and tested on its own. For a
-product with a web app and a server, that is two:
+The repositories the product is built in. Every product has two leaves, each built and tested on its own:
 
 ```yaml
 runtime: {realm: niflheim-local, realm_version: 0.1.0}
@@ -65,17 +64,14 @@ leaves:
 - `consumes` lists the leaves whose API or contract this leaf calls.
 - A path is `repos/<name>`. A description is one line. When the product has a web app and an API, name them
   `repos/web` and `repos/api`: the acceptance run looks there.
-- A product with no server of its own has only `repos/web`.
 - The leaves are `repos/web` and `repos/api`, and no other.
 
-### 3. The runtime
-
-The spec says how the product runs, so the plan can build to it:
+In *Architecture and components*, say how the product runs, so the plan can build to it:
 
 - The product runs on one machine, with Postgres and an S3 store that the factory's `start.sh` starts. No task
   writes `start.sh`.
 - The web leaf serves port 3000: the built web app, `/api/` to the API, and `/<S3_BUCKET>/` to the store. The
-  API never serves the web app.
+  realm's `serve.mjs` does the forwarding, and no task builds it. The API never serves the web app.
 - The product keeps its data under `/app/.data/`. The API writes files only under `DATA_DIR`.
 - The API reads `PORT`, `HOST`, `DATABASE_URL`, `DATA_DIR`, `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`,
   `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY`. The web leaf reads `PORT`, `HOST`, `API_URL`, `S3_ENDPOINT` and

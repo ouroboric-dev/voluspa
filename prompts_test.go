@@ -194,8 +194,17 @@ func TestPromptsNameTheRuntime(t *testing.T) {
 	if l.Runtime == nil || l.Runtime.Realm != "niflheim-local" || l.Runtime.RealmVersion != "0.1.0" {
 		t.Errorf("runtime = %+v", l.Runtime)
 	}
-	plan := prompt(t, "plan.md")
-	for _, want := range []string{"No task writes `start.sh` or any file outside its leaf", "never `/app/start.sh`"} {
+	if !strings.Contains(spec, "Photo bytes and zips of photos go between the browser and the store, never through the API.") {
+		t.Error("spec.md lacks the photo rule")
+	}
+	if !strings.Contains(spec, "`serve.mjs` does the forwarding, and no task builds it") {
+		t.Error("spec.md does not say that serve.mjs forwards and no task builds it")
+	}
+	if strings.Contains(spec, "no server of its own") {
+		t.Error("spec.md allows a product without repos/api")
+	}
+	plan := strings.Join(strings.Fields(prompt(t, "plan.md")), " ")
+	for _, want := range []string{"No task writes any file outside its leaf.", "no task writes a `start.sh` anywhere, `/app/start.sh` included"} {
 		if !strings.Contains(plan, want) {
 			t.Errorf("plan.md lacks %q", want)
 		}
@@ -203,8 +212,8 @@ func TestPromptsNameTheRuntime(t *testing.T) {
 }
 
 func TestReviewerNamesThePhotoRule(t *testing.T) {
-	text := prompt(t, "reviewer-spec.md")
-	for _, want := range []string{"streams a photo's bytes or a zip of photos", "spec §9.3", "is a **blocker**"} {
+	text := strings.Join(strings.Fields(prompt(t, "reviewer-spec.md")), " ")
+	for _, want := range []string{"An API that streams a photo's bytes or a zip of photos breaks the rule that photo bytes never pass through the API (Yggdrasil spec §9.3): **blocker**."} {
 		if !strings.Contains(text, want) {
 			t.Errorf("reviewer-spec.md lacks %q", want)
 		}
