@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ouroboric-dev/gungnir"
 	"github.com/ouroboric-dev/gungnir/schema"
@@ -206,5 +207,31 @@ func TestTheContractGateComesBeforeTheMoveAndTheMoveShipsTheRoutingIndexes(t *te
 	}
 	if loadPack(t).Routing != nil {
 		t.Error("the pack sets a routing threshold; a project needs its bench first")
+	}
+}
+
+// F2: the rehearsal's conformance reviewer ran out its 10-minute session on a review of about 62 KB, so the
+// conformance session gets 20 minutes. The task loop's reviewers keep 10 minutes; no other deadline changes.
+func TestConformanceHasTwentyMinutes(t *testing.T) {
+	g := loadGraph(t)
+	by := map[string]schema.Node{}
+	for _, n := range g.All() {
+		by[n.ID] = n
+	}
+	if got := time.Duration(by["conformance"].Timeout); got != 20*time.Minute {
+		t.Errorf("conformance timeout = %v, want 20m (F2)", got)
+	}
+	body := g.Nodes[len(g.Nodes)-1].Body
+	reviewers := 0
+	for _, n := range body {
+		for _, r := range n.Reviewers {
+			reviewers++
+			if got := time.Duration(r.Timeout); got != 10*time.Minute {
+				t.Errorf("reviewer %s of %s timeout = %v, want 10m", r.ID, n.ID, got)
+			}
+		}
+	}
+	if reviewers != 3 {
+		t.Errorf("the task loop has %d reviewers, want 3", reviewers)
 	}
 }

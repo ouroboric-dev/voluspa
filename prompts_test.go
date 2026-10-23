@@ -118,7 +118,7 @@ func TestThePlanAndSpecPromptsExamplesAreFilesOdinReads(t *testing.T) {
 	}
 	var leaves string
 	for _, b := range blocks(prompt(t, "spec.md")) {
-		if strings.HasPrefix(b, "leaves:") {
+		if strings.Contains(b, "\nleaves:") || strings.HasPrefix(b, "leaves:") {
 			leaves = b
 		}
 	}
@@ -158,5 +158,64 @@ func TestTheReviewersSayWhatToLookAtAndHowToNameFindings(t *testing.T) {
 	}
 	if !strings.Contains(prompt(t, "reviewer-simplicity.md"), "The skill below") || !strings.Contains(prompt(t, "reuse-review.md"), "The skill below") {
 		t.Error("a prompt that relies on the vendored skill must say that the skill follows it")
+	}
+}
+
+// The spec prompt names the runtime the product runs on, the leaves and the variables; the plan prompt
+// keeps every task inside its leaf.
+func TestPromptsNameTheRuntime(t *testing.T) {
+	raw := prompt(t, "spec.md")
+	spec := strings.Join(strings.Fields(raw), " ")
+	for _, want := range []string{
+		"one machine", "Postgres and an S3 store", "the factory's `start.sh`",
+		"`repos/web` and `repos/api`, and no other", "The web leaf serves port 3000", "The API never serves the web app",
+		"`/app/.data/`", "writes files only under `DATA_DIR`",
+		"`PORT`, `HOST`, `DATABASE_URL`, `DATA_DIR`, `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY`",
+		"`PORT`, `HOST`, `API_URL`, `S3_ENDPOINT` and `S3_BUCKET`",
+		"`niflheim-local` 0.1.0 (the only runtime realm)", "`ygg-store`", "`us-east-1`",
+	} {
+		if !strings.Contains(spec, want) {
+			t.Errorf("spec.md lacks %q", want)
+		}
+	}
+	var leaves string
+	for _, b := range blocks(raw) {
+		if strings.Contains(b, "\nleaves:") || strings.HasPrefix(b, "leaves:") {
+			leaves = b
+		}
+	}
+	if !strings.Contains(leaves, "runtime: {realm: niflheim-local, realm_version: 0.1.0}") {
+		t.Error("the leaves example has no runtime pin")
+	}
+	l, err := schema.ParseLeaves("leaves.yaml", []byte(leaves))
+	if err != nil {
+		t.Fatalf("ParseLeaves() = %v", err)
+	}
+	if l.Runtime == nil || l.Runtime.Realm != "niflheim-local" || l.Runtime.RealmVersion != "0.1.0" {
+		t.Errorf("runtime = %+v", l.Runtime)
+	}
+	if !strings.Contains(spec, "Photo bytes and zips of photos go between the browser and the store, never through the API.") {
+		t.Error("spec.md lacks the photo rule")
+	}
+	if !strings.Contains(spec, "`serve.mjs` does the forwarding, and no task builds it") {
+		t.Error("spec.md does not say that serve.mjs forwards and no task builds it")
+	}
+	if strings.Contains(spec, "no server of its own") {
+		t.Error("spec.md allows a product without repos/api")
+	}
+	plan := strings.Join(strings.Fields(prompt(t, "plan.md")), " ")
+	for _, want := range []string{"No task writes any file outside its leaf.", "no task writes a `start.sh` anywhere, `/app/start.sh` included"} {
+		if !strings.Contains(plan, want) {
+			t.Errorf("plan.md lacks %q", want)
+		}
+	}
+}
+
+func TestReviewerNamesThePhotoRule(t *testing.T) {
+	text := strings.Join(strings.Fields(prompt(t, "reviewer-spec.md")), " ")
+	for _, want := range []string{"An API that streams a photo's bytes or a zip of photos breaks the rule that photo bytes never pass through the API (Yggdrasil spec §9.3): **blocker**."} {
+		if !strings.Contains(text, want) {
+			t.Errorf("reviewer-spec.md lacks %q", want)
+		}
 	}
 }

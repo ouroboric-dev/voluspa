@@ -58,6 +58,9 @@ Front matter as above, then one section for each task, exactly in this form (a p
 - **Tests belong to tasks.** Do not make a task of "write tests". Each task has its own, written first.
 - **Security is part of every task** that touches it: who may do this, how the server checks it, what
   happens when someone else asks for it.
+- **Each task stays in its leaf.** No task writes any file outside its leaf. The factory writes the project's
+  `start.sh`; no task writes a `start.sh` anywhere, `/app/start.sh` included. The web leaf serves port 3000; no task makes the API serve the
+  web app. A task that reads a variable of the runtime names it as the spec does.
 - **No task for what is not in the spec.** No cleanup, refactoring or tooling tasks.
 - Acceptance criteria are checkable by a test or by using the product. Two to five for each task.
 

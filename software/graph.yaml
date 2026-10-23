@@ -38,7 +38,8 @@ nodes:
     reviews: spec
     inputs: [docs/1-product]
     max_turns: 15
-    timeout: 10m
+    # F2: the rehearsal's conformance reviewer ran out its 10-minute session on a ~62 KB review.
+    timeout: 20m
   - id: spec-gate
     kind: gate
     gate: spec

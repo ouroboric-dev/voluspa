@@ -26,6 +26,7 @@ Then:
 - **The contract.** If the task gives contract text, the leaf's copy matches it exactly and the generated
   types are current: a mismatch is a **blocker**. If the work changes what the API or the app promises
   without the task saying so: **major**.
+- **Photo bytes.** An API that streams a photo's bytes or a zip of photos breaks the rule that photo bytes never pass through the API (Yggdrasil spec §9.3): **blocker**.
 - **The named test.** The test the task names exists and proves the task: if not, **major**.
 - **Documentation.** If the work changes how the app is used or run and `README.md` or `docs/` says
   otherwise: **minor**.
