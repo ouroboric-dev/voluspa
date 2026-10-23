@@ -144,7 +144,7 @@ func TestTheSpecPromptNamesTheGallerysRealmsAtTheirVersions(t *testing.T) {
 func TestTheReviewersSayWhatToLookAtAndHowToNameFindings(t *testing.T) {
 	for name, ids := range map[string]string{"reviewer-spec.md": "spec-1", "reviewer-simplicity.md": "simple-1", "reviewer-quality.md": "quality-1"} {
 		text := prompt(t, name)
-		for _, want := range []string{"read-only", "git merge-base HEAD main", ids, "file:line", "**blocker**"} {
+		for _, want := range []string{"read-only", `"The change"`, ids, "file:line", "**blocker**"} {
 			if want == "**blocker**" && name == "reviewer-simplicity.md" {
 				want = "**Must fix**"
 			}
@@ -216,6 +216,21 @@ func TestReviewerNamesThePhotoRule(t *testing.T) {
 	for _, want := range []string{"An API that streams a photo's bytes or a zip of photos breaks the rule that photo bytes never pass through the API (Yggdrasil spec §9.3): **blocker**."} {
 		if !strings.Contains(text, want) {
 			t.Errorf("reviewer-spec.md lacks %q", want)
+		}
+	}
+}
+
+// A reviewer has no shell: it reads the change in the section Odin puts in its prompt, not from git.
+func TestTheReviewerPromptsReadTheChangeSectionAndRunNoGit(t *testing.T) {
+	for _, name := range buildPrompts {
+		text := prompt(t, name)
+		if !strings.Contains(text, `"The change"`) {
+			t.Errorf("%s does not name the section \"The change\"", name)
+		}
+		for _, bad := range []string{"git diff", "git merge-base"} {
+			if strings.Contains(text, bad) {
+				t.Errorf("%s tells the reviewer to run %q; a reviewer has no shell", name, bad)
+			}
 		}
 	}
 }
