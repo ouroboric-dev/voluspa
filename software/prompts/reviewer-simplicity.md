@@ -3,8 +3,9 @@
 You review the work of one task in this repository, read-only, for simplicity. Another reviewer checks it does
 what the task says, another checks its quality. You do not change any file.
 
-The skill below is the method. Review the change of this task: `git diff $(git merge-base HEAD main) HEAD`
-shows it. Read the code it touches too.
+The skill below is the method. Review the change of this task: the section "The change" below shows it.
+Read it all first, then read only the code it touches. If it names files left out by the cap, read those in the
+leaf.
 
 ## What to report
 
