@@ -62,19 +62,58 @@ func TestEveryBuildPromptIsThereAndKeepsTheBenchmarkOutOfAgentsReach(t *testing.
 	sensible(t, buildPrompts)
 }
 
-func TestThePlanningPromptsSayWhereTheirDocumentsGo(t *testing.T) {
-	for name, paths := range map[string][]string{
-		"design.md":       {"out/1-product/design/<date>-<slug>.md"},
-		"spec.md":         {"out/2-engineering/specs/<date>-<slug>.md", "out/leaves.yaml", "docs/1-product/design/"},
-		"conformance.md":  {"out/conformance.json", "reviewed/2-engineering/specs/", "reviewed/leaves.yaml", "docs/1-product/design/"},
-		"plan.md":         {"out/2-engineering/plans/<date>-<slug>/", "docs/leaves.yaml", "docs/2-engineering/specs/"},
-		"reuse-review.md": {"out/2-engineering/reviews/<date>-<slug>-reuse-review.md", "reviewed/2-engineering/plans/"},
+// A planning agent hands back typed output; no prompt asks for a file under out/ that Odin once collected, or for the date
+// from a shell (the date is the input `date`).
+func TestNoPromptAsksForAFileOrTheDate(t *testing.T) {
+	for _, name := range append(append([]string{}, planningPrompts...), buildPrompts...) {
+		text := prompt(t, name)
+		for _, bad := range []string{"out/1-product", "out/2-engineering", "out/leaves.yaml", "out/conformance.json", "date +%F", "reviewed/", "docs/1-product", "docs/2-engineering", "docs/leaves.yaml"} {
+			if strings.Contains(text, bad) {
+				t.Errorf("%s holds %q; the inputs come in the prompt and the output goes back through submit", name, bad)
+			}
+		}
+	}
+}
+
+// Each planning prompt names its contract, its inputs by name, and how to hand the output back. The field list and the
+// schema are Odin's to append, so a prompt points at "Your answer" and does not repeat the schema.
+func TestEachPlanningPromptNamesItsContract(t *testing.T) {
+	big := map[string]bool{"spec.md": true, "plan.md": true}
+	for name, w := range map[string]struct {
+		contract string
+		inputs   []string
+	}{
+		"design.md":       {"ygg.design/v1", []string{"`brief`", "`decisions`", "`rejection`", "`date`"}},
+		"spec.md":         {"ygg.spec/v1", []string{"`design`", "`decisions`", "`brief`", "`rejection`", "`refusal`", "`date`"}},
+		"conformance.md":  {"ygg.conformance/v1", []string{"`spec`", "`design`"}},
+		"plan.md":         {"ygg.plan/v1", []string{"`spec`", "`design`", "`decisions`", "`rejection`", "`refusal`", "`date`"}},
+		"reuse-review.md": {"ygg.reuse-review/v1", []string{"`plan`", "`spec`", "`rejection`"}},
 	} {
 		text := prompt(t, name)
-		for _, p := range paths {
-			if !strings.Contains(text, p) {
-				t.Errorf("%s does not mention %s", name, p)
+		for _, want := range append([]string{w.contract, "Your answer", "`submit`", "`blocked`"}, w.inputs...) {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s does not mention %s", name, want)
 			}
+		}
+		for _, large := range []string{"out/", "`check`"} {
+			if has := strings.Contains(text, large); has != big[name] {
+				t.Errorf("%s mentions %s: %v; only a large output is drafted in a file and checked", name, large, has)
+			}
+		}
+		if big[name] && !strings.Contains(text, ".json") {
+			t.Errorf("%s does not name the draft file", name)
+		}
+		if strings.Contains(text, `"$schema"`) || strings.Contains(text, `"additionalProperties"`) {
+			t.Errorf("%s repeats the schema; Odin appends it", name)
+		}
+	}
+	if !strings.Contains(prompt(t, "design.md"), "`q1`") {
+		t.Error("design.md does not ask for open question ids q1, q2, ...")
+	}
+	spec := prompt(t, "spec.md")
+	for _, want := range []string{"`decisions[].cites`", "`deviations[].cites`"} {
+		if !strings.Contains(spec, want) {
+			t.Errorf("spec.md does not tell the agent to cite the owner decisions in %s", want)
 		}
 	}
 }
@@ -95,25 +134,26 @@ func TestTheConformancePromptsExamplesAreVerdictsOdinReads(t *testing.T) {
 	}
 }
 
-// The task the plan prompt shows is a task Odin reads, and a ready one; the leaves file the spec prompt shows
+// The task the plan prompt shows is a task of the plan contract, and a ready one; the leaves file the spec prompt shows
 // is a leaves file Odin reads.
-func TestThePlanAndSpecPromptsExamplesAreFilesOdinReads(t *testing.T) {
+func TestThePlanAndSpecPromptsExamplesAreDocumentsOdinReads(t *testing.T) {
 	var task string
 	for _, b := range blocks(prompt(t, "plan.md")) {
-		if strings.Contains(b, "**Named test:**") {
+		if strings.Contains(b, `"named_test"`) {
 			task = b
 		}
 	}
 	if task == "" {
 		t.Fatal("the plan prompt shows no task")
 	}
-	task = strings.NewReplacer("<plan>", "gallery", "<title>", "the API stores galleries", "<a thing that is true when the task is done>", "a gallery can be created", "<another>", "a gallery has a name",
-		"<the test file and test name that proves it>", "gallery_test.go TestCreateGallery").Replace(task)
-	fs, err := schema.ParseTasks("tasks.md", []byte(task))
-	if err != nil || len(fs) != 1 {
-		t.Fatalf("ParseTasks() = %v, %v", fs, err)
+	task = strings.NewReplacer("<slug>", "gallery", "<title>", "the API stores galleries", "<a thing that is true when the task is done>", "a gallery can be created", "<another>", "a gallery has a name",
+		"<the test file and test name that proves it>", "gallery_test.go TestCreateGallery", "<behaviour, routes, fields, limits and errors>", "POST /galleries creates one.").Replace(task)
+	doc := `{"title": "Gallery", "slug": "gallery", "goal": "Galleries.", "decisions": [], "risks": [], "tasks": [` + task + `]}`
+	plan, err := schema.Decode[schema.Plan](schema.ContractPlan, []byte(doc))
+	if err != nil || len(plan.Tasks) != 1 {
+		t.Fatalf("Decode(plan) = %+v, %v", plan, err)
 	}
-	if err := schema.CheckReady(fs, []string{"repos/api"}); err != nil {
+	if err := schema.CheckReady(schema.FeaturesFromPlan(plan), []string{"repos/api"}); err != nil {
 		t.Errorf("the example task is not ready: %v", err)
 	}
 	var leaves string

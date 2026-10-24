@@ -56,8 +56,8 @@ func TestTheSoftwarePackHoldsAGraphAndItsPromptsOnly(t *testing.T) {
 	if p.HoldsRecipe() {
 		t.Error("the software pack holds a recipe (checks, leaf, leaves, sandbox or services); a graph pack holds none")
 	}
-	if g := loadGraph(t); g.Schema != 1 {
-		t.Errorf("graph schema = %d, want 1", g.Schema)
+	if g := loadGraph(t); g.Schema != 2 {
+		t.Errorf("graph schema = %d, want 2", g.Schema)
 	}
 	if got := names(t, softwareDir); !slices.Equal(got, []string{"graph.yaml", "pack.yaml", "prompts"}) {
 		t.Errorf("software/ holds %v, want graph.yaml, pack.yaml and prompts/", got)
@@ -233,5 +233,74 @@ func TestConformanceHasTwentyMinutes(t *testing.T) {
 	}
 	if reviewers != 3 {
 		t.Errorf("the task loop has %d reviewers, want 3", reviewers)
+	}
+}
+
+// The graph declares what every node takes and hands back (change typed-boundaries). ParseGraph runs CheckTypes, which
+// refuses a join that does not type-check, a gate's re-run target that lacks rejection and a back_to target that lacks
+// refusal; this test names the declarations too, so a change to one is a change to this list.
+func TestTheGraphDeclaresEveryNodesTypes(t *testing.T) {
+	g := loadGraph(t)
+	if err := g.CheckTypes(); err != nil {
+		t.Fatalf("CheckTypes() = %v", err)
+	}
+	want := map[string]struct {
+		input  []string
+		output string
+	}{
+		"design":          {[]string{"brief", "decisions", "rejection", "date"}, "ygg.design/v1"},
+		"spec":            {[]string{"design", "decisions", "brief", "rejection", "refusal", "date"}, "ygg.spec/v1"},
+		"conformance":     {[]string{"spec", "design"}, "ygg.conformance/v1"},
+		"plan":            {[]string{"spec", "design", "decisions", "rejection", "refusal", "date"}, "ygg.plan/v1"},
+		"reuse-review":    {[]string{"plan", "spec", "rejection"}, "ygg.reuse-review/v1"},
+		"implement":       {[]string{"task", "open_findings", "check_results", "rejection", "refusal"}, "ygg.implement/v1"},
+		"spec-compliance": {[]string{"task", "change", "open_findings", "check_results"}, "ygg.review/v1"},
+		"simplicity":      {[]string{"task", "change", "open_findings", "check_results"}, "ygg.review/v1"},
+		"quality":         {[]string{"task", "change", "open_findings", "check_results"}, "ygg.review/v1"},
+	}
+	type decl struct {
+		input  []string
+		output string
+	}
+	by := map[string]decl{}
+	for _, n := range g.All() {
+		by[n.ID] = decl{n.Input, n.Output}
+		for _, r := range n.Reviewers {
+			by[r.ID] = decl{r.Input, r.Output}
+		}
+	}
+	for id, w := range want {
+		n, ok := by[id]
+		if !ok {
+			t.Errorf("the graph has no node %s", id)
+			continue
+		}
+		if !slices.Equal(n.input, w.input) || n.output != w.output {
+			t.Errorf("%s declares input %v and output %q, want %v and %q", id, n.input, n.output, w.input, w.output)
+		}
+	}
+	// A kind that declares neither is not an agent, a loop or a reviewer.
+	for id, d := range by {
+		if _, ok := want[id]; !ok && (len(d.input) > 0 || d.output != "") {
+			t.Errorf("%s declares input %v and output %q; it is not an agent, a loop or a reviewer", id, d.input, d.output)
+		}
+	}
+	// The secret scan stops a publish and re-runs the node it publishes with a rejection (the founder's decision), and a
+	// plan goes back to its planner with a refusal.
+	for _, n := range g.All() {
+		if n.Kind == schema.KindPublish && !slices.Contains(by[n.From].input, schema.SourceRejection) {
+			t.Errorf("%s publishes %s, which does not declare rejection for the secret scan's re-run", n.ID, n.From)
+		}
+		if n.BackTo != "" && !slices.Contains(by[n.BackTo].input, schema.SourceRefusal) {
+			t.Errorf("%s goes back to %s, which does not declare refusal", n.ID, n.BackTo)
+		}
+	}
+	for _, n := range g.Nodes {
+		if n.Kind == schema.KindTasks && n.From != "plan" {
+			t.Errorf("the tasks node reads %q, want the plan node", n.From)
+		}
+	}
+	if len(g.Nodes[len(g.Nodes)-1].Body) == 0 {
+		t.Error("the task loop is not the last node")
 	}
 }

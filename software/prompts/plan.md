@@ -7,50 +7,55 @@ every problem, if one is not.
 
 ## What to read
 
-`docs/2-engineering/specs/` holds the approved spec, `docs/leaves.yaml` the leaves, and `docs/1-product/` the
-design. If a plan from before is in `docs/2-engineering/plans/`, this is a change: plan only what is new.
+- Your input `spec` is the approved spec, with the leaves. Its leaves are the only layers a task may name.
+- Your input `design` is the approved design.
+- Your input `decisions` holds the owner's decisions, each with an id. When a decision of yours comes from one,
+  cite its id in that decision's `cites`. It may be empty.
+- Your input `rejection` says why a person sent the plan back, and your input `refusal` lists every problem the
+  readiness check found in your last plan. Fix them all. Both may be empty.
+- The date is in your input `date`.
 
 ## What to write
 
-A folder `out/2-engineering/plans/<date>-<slug>/` (the date from `date +%F`) with two files.
+The plan and its tasks, as the typed output of the contract `ygg.plan/v1`. The fields are given in "Your answer"
+below. A plan is large: draft it in `out/plan.json`, check it with `check`, then submit the file with `submit`.
 
-### `plan.md`
+The plan has a title, a slug (two to four words, lower case, joined by dashes), a goal, decisions (each a
+decision, a reason and the date in your input `date`, for choices the spec left to you: the order, how a feature
+is split, what is built first), risks, and the tasks in the order they are built.
 
-Front matter (`title`, `status: draft`, `date`, `related` with a link to the spec), then **Goal**; **Order**
-(a table: task id, leaf, size, depends on); **Decisions** (each `**Decided <date>:** <decision>. <reason>.`,
-for choices the spec left to you: the order, how a feature is split, what is built first); **Risks**.
+Each task is one object. This is a task, with the placeholders in angle brackets:
 
-### `tasks.md`
-
-Front matter as above, then one section for each task, exactly in this form (a program reads it):
-
-```text
-## <plan>-T001: <title>
-
-- **Acceptance criteria:**
-  - [ ] <a thing that is true when the task is done>
-  - [ ] <another>
-- **Named test:** <the test file and test name that proves it>
-- **Layer:** repos/api
-- **Size:** S
-- **Depends on:** nothing
+```json
+{
+  "id": "<slug>-T001",
+  "title": "<title>",
+  "criteria": ["<a thing that is true when the task is done>", "<another>"],
+  "named_test": "<the test file and test name that proves it>",
+  "layer": "repos/api",
+  "size": "S",
+  "depends_on": [],
+  "text": "<behaviour, routes, fields, limits and errors>"
+}
 ```
 
 - The id is `<slug>-T001`, `<slug>-T002` and so on. A title says what the task delivers.
-- **Layer** is a leaf path from `docs/leaves.yaml`, exactly. One task works in one leaf.
-- **Size**: S is under 100 changed lines, M is 100 to 400. A task that is bigger is split: the plan is sent
+- `layer` is a leaf path from the spec's leaves, exactly. One task works in one leaf.
+- `size`: S is under 100 changed lines, M is 100 to 400. A task that is bigger is split: the plan is sent
   back if any task is L. Prefer S.
-- **Depends on** lists task ids, separated by commas, or `nothing`. Dependencies form no loop.
-- **Named test** is the file and the test that will fail before the task is built and pass after. The
+- `depends_on` lists task ids, or is empty. Dependencies form no loop.
+- `named_test` is the file and the test that will fail before the task is built and pass after. The
   implementer writes it first.
+- `text` is the words the implementer reads, whole. A task that adds or calls a route also has `contract`, a
+  string with the OpenAPI text.
 
 ## How to cut the work
 
 - **Each task is self-contained.** The agent that builds it sees its leaf and the task, nothing else: not the
   design, not the spec, not the other leaves. Put into the task everything it needs: the behaviour, the exact
   routes, fields, status codes and messages, the files or components to change, the limits and the errors.
-  When a task changes the API's contract, give the full text of the OpenAPI addition. When a web task calls
-  a route, give the same text, so it can copy the contract exactly.
+  When a task changes the API's contract, give the full text of the OpenAPI addition in `contract`. When a web
+  task calls a route, give the same text, so it can copy the contract exactly.
 - **The contract first.** A task that adds or changes a route comes before the task in another leaf that
   uses it, and the consumer depends on it.
 - **A thin working slice first.** The first tasks end with something a person can run, even if small. Later
@@ -66,8 +71,10 @@ Front matter as above, then one section for each task, exactly in this form (a p
 
 ## Rules
 
-- Write only under `out/`. Short sentences, active voice, concrete values.
+- Short sentences, active voice, concrete values.
 - Keep the plan as small as the spec allows. Fewer, clearer tasks beat many.
+- If you cannot write the plan (the spec has no leaves, or contradicts itself), send `blocked` with the reason
+  instead. A person sees it.
 
 When you are done, answer with one or two sentences: how many tasks, in how many leaves, and what is built
 first.

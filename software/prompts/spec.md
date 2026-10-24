@@ -6,31 +6,31 @@ against the design, and a person approves the leaves. Everything later is built 
 
 ## What to read
 
-`docs/1-product/design/` in your workspace holds the approved design. Read all of it. If a file named
-`docs/leaves.yaml` or an earlier spec is there, this is a change to a product that exists: keep what it says
-and change only what the design now asks for.
+- Your input `design` is the approved design. Read all of it.
+- Your input `decisions` holds the owner's decisions, each with an id. Every one of them must show in the spec:
+  cite its id in `decisions[].cites` where the spec decides by it, or in `deviations[].cites` where the spec
+  departs from it. A decision you leave uncited is an error. It may be empty.
+- Your input `brief` is the brief the design came from.
+- Your input `rejection` says why a person sent the spec back, if one did, and your input `refusal` says what a
+  later step of the factory refused. Fix what they say. Both may be empty.
+- The date is in your input `date`.
 
 ## What to write
 
-### 1. The spec: `out/2-engineering/specs/<date>-<slug>.md`
+The spec and the leaves, as the typed output of the contract `ygg.spec/v1`. The fields are given in
+"Your answer" below. A spec is large: draft it in `out/spec.json`, check it with `check`, then submit the file with
+`submit`. A short spec may go in `submit` directly.
 
-Get the date by running `date +%F`. The slug is the design's slug. Front matter:
+### 1. The spec
 
-```text
----
-title: <the product's name> spec
-status: draft
-date: <the date>
-related: [<relative link to the design doc>]
----
-```
+The slug is the design's slug. The spec holds these parts, in this order: **Summary**; **Architecture and
+components**; **Interfaces and contracts**; **Data model**; **Acceptance criteria per feature**; **Security
+considerations**; **Testing approach**; **Decisions** (each a decision, a reason and the date in your input `date`);
+**Deviations from the design doc**.
 
-Sections, in this order: **Summary**; **Architecture and components**; **Interfaces and contracts**; **Data
-model**; **Acceptance criteria per feature**; **Security considerations**; **Testing approach**;
-**Decisions** (each `**Decided <date>:** <decision>. <reason>.`); **Deviations from the design doc**.
-
-- *Deviations from the design doc* is empty (write "None.") unless the design cannot be built as written.
-  List each deviation and why. A deviation stops the spec for a person to decide; use it only when you must.
+- *Deviations from the design doc* is empty unless the design cannot be built as written. List each deviation:
+  what differs, where in the design, and why. A deviation stops the spec for a person to decide; use it only
+  when you must.
 - Every feature of the design has acceptance criteria here, each one testable by a program or a person
   without asking you what it meant. Name inputs and outputs: paths, fields, status codes, messages.
 - *Interfaces and contracts*: give the API's routes with methods, request and response fields, status codes
@@ -39,9 +39,10 @@ model**; **Acceptance criteria per feature**; **Security considerations**; **Tes
   people, what is never stored, how files and keys are named, which limits stop abuse.
 - Do not add anything the design does not ask for.
 
-### 2. The leaves: `out/leaves.yaml`
+### 2. The leaves
 
-The repositories the product is built in. Every product has two leaves, each built and tested on its own:
+The repositories the product is built in, in the `leaves` field. Every product has two leaves, each built and
+tested on its own. Here they are in YAML; the field holds the same structure as a JSON object:
 
 ```yaml
 runtime: {realm: niflheim-local, realm_version: 0.1.0}
@@ -81,9 +82,10 @@ In *Architecture and components*, say how the product runs, so the plan can buil
 
 ## Rules
 
-- Write only under `out/`. Do not change `docs/` or anything else.
+- Your only product is the answer. Write no other file than the draft.
 - Short sentences, active voice, concrete examples. Say "the API returns 404", not "an appropriate error".
 - If the design is unclear, choose the simplest reading that satisfies its success criteria, and write the
   choice as a Decision.
+- If you cannot write the spec at all, send `blocked` with the reason instead. A person sees it.
 
 When you are done, answer with one or two sentences: what the spec covers, and any deviation you listed.

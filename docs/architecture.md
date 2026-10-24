@@ -22,7 +22,7 @@ The graph library: one folder per graph, with its stage prompts.
 
 ## Depends on
 
-- Gungnir's schemas: the pack and the graph (`graph.yaml` holds `schema: 1`).
+- Gungnir's schemas: the pack and the graph (`graph.yaml` holds `schema: 2`).
 - Havamal's `ponytail-review` skill, for the reuse review and the simplicity reviewer.
 - The operator's `factory.yaml` defines the roles `planner`, `implementer` and `reviewer` the graph names.
 
