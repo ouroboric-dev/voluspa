@@ -77,6 +77,23 @@ func TestNoPromptAsksForAFileOrTheDate(t *testing.T) {
 
 // Each planning prompt names its contract, its inputs by name, and how to hand the output back. The field list and the
 // schema are Odin's to append, so a prompt points at "Your answer" and does not repeat the schema.
+// Odin renders an input as "## Input: <name>", so no prompt points at a section by another name.
+func TestNoPromptNamesAStaleSection(t *testing.T) {
+	for _, name := range append(append([]string{}, planningPrompts...), buildPrompts...) {
+		text := prompt(t, name)
+		for _, bad := range []string{`under "Brief"`, `"The change"`, `("Your task")`} {
+			if strings.Contains(text, bad) {
+				t.Errorf("%s holds %q; Odin renders each input as ## Input: <name>", name, bad)
+			}
+		}
+	}
+	for _, name := range planningPrompts {
+		if !strings.Contains(prompt(t, name), "outside your workspace") {
+			t.Errorf("%s lacks the workspace rule", name)
+		}
+	}
+}
+
 func TestEachPlanningPromptNamesItsContract(t *testing.T) {
 	big := map[string]bool{"spec.md": true, "plan.md": true}
 	for name, w := range map[string]struct {
@@ -184,7 +201,7 @@ func TestTheSpecPromptNamesTheGallerysRealmsAtTheirVersions(t *testing.T) {
 func TestTheReviewersSayWhatToLookAtAndHowToNameFindings(t *testing.T) {
 	for name, ids := range map[string]string{"reviewer-spec.md": "spec-1", "reviewer-simplicity.md": "simple-1", "reviewer-quality.md": "quality-1"} {
 		text := prompt(t, name)
-		for _, want := range []string{"read-only", `"The change"`, ids, "file:line", "**blocker**"} {
+		for _, want := range []string{"read-only", "`change`", ids, "file:line", "**blocker**"} {
 			if want == "**blocker**" && name == "reviewer-simplicity.md" {
 				want = "**Must fix**"
 			}
@@ -264,8 +281,8 @@ func TestReviewerNamesThePhotoRule(t *testing.T) {
 func TestTheReviewerPromptsReadTheChangeSectionAndRunNoGit(t *testing.T) {
 	for _, name := range buildPrompts {
 		text := prompt(t, name)
-		if !strings.Contains(text, `"The change"`) {
-			t.Errorf("%s does not name the section \"The change\"", name)
+		if !strings.Contains(text, "your input `change`") {
+			t.Errorf("%s does not name the input `change`", name)
 		}
 		for _, bad := range []string{"git diff", "git merge-base"} {
 			if strings.Contains(text, bad) {

@@ -5,8 +5,8 @@ else. Another reviewer looks at the code's simplicity, another at its quality. Y
 
 ## What to read
 
-- The task below ("Your task"): its acceptance criteria and the test that proves it.
-- The change: the section "The change" below shows everything the task changed. Read it all first, then read
+- Your input `task`: its acceptance criteria and the test that proves it.
+- The change: your input `change` shows everything the task changed. Read it all first, then read
   only the code it touches. If it names files left out by the cap, read those in the leaf.
 - `AGENTS.md`: the rules of this repository.
 

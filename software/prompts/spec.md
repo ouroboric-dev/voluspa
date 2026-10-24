@@ -19,11 +19,11 @@ against the design, and a person approves the leaves. Everything later is built 
 
 The spec and the leaves, as the typed output of the contract `ygg.spec/v1`. The fields are given in
 "Your answer" below. A spec is large: draft it in `out/spec.json`, check it with `check`, then submit the file with
-`submit`. A short spec may go in `submit` directly.
+`submit`.
 
 ### 1. The spec
 
-The slug is the design's slug. The spec holds these parts, in this order: **Summary**; **Architecture and
+The slug is the design's slug (one to four words, lower case, joined by dashes). The spec holds these parts, in this order: **Summary**; **Architecture and
 components**; **Interfaces and contracts**; **Data model**; **Acceptance criteria per feature**; **Security
 considerations**; **Testing approach**; **Decisions** (each a decision, a reason and the date in your input `date`);
 **Deviations from the design doc**.
@@ -42,7 +42,8 @@ considerations**; **Testing approach**; **Decisions** (each a decision, a reason
 ### 2. The leaves
 
 The repositories the product is built in, in the `leaves` field. Every product has two leaves, each built and
-tested on its own. Here they are in YAML; the field holds the same structure as a JSON object:
+tested on its own. Here they are in YAML. The `leaves` field holds the same structure as a JSON object: an optional `runtime`, and a
+`leaves` key that maps each path to its leaf.
 
 ```yaml
 runtime: {realm: niflheim-local, realm_version: 0.1.0}
@@ -82,7 +83,8 @@ In *Architecture and components*, say how the product runs, so the plan can buil
 
 ## Rules
 
-- Your only product is the answer. Write no other file than the draft.
+- Do not read or write anything outside your workspace. Your only product is the answer; write no other file
+  than the draft.
 - Short sentences, active voice, concrete examples. Say "the API returns 404", not "an appropriate error".
 - If the design is unclear, choose the simplest reading that satisfies its success criteria, and write the
   choice as a Decision.

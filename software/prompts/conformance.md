@@ -40,6 +40,6 @@ design does not say (or the reverse), where in the spec, and the two ways to set
 include it, or change the spec to drop it. Keep it under 2,000 characters.
 
 If you cannot judge (an input is empty or unreadable), send `blocked` with the reason instead of a verdict. A
-person sees it. Do not write any file.
+person sees it. Do not read or write anything outside your workspace, and write no file.
 
 When you are done, answer with one sentence.

@@ -20,7 +20,7 @@ every problem, if one is not.
 The plan and its tasks, as the typed output of the contract `ygg.plan/v1`. The fields are given in "Your answer"
 below. A plan is large: draft it in `out/plan.json`, check it with `check`, then submit the file with `submit`.
 
-The plan has a title, a slug (two to four words, lower case, joined by dashes), a goal, decisions (each a
+The plan has a title, a slug (one to four words, lower case, joined by dashes), a goal, decisions (each a
 decision, a reason and the date in your input `date`, for choices the spec left to you: the order, how a feature
 is split, what is built first), risks, and the tasks in the order they are built.
 
@@ -71,6 +71,7 @@ Each task is one object. This is a task, with the placeholders in angle brackets
 
 ## Rules
 
+- Do not read or write anything outside your workspace.
 - Short sentences, active voice, concrete values.
 - Keep the plan as small as the spec allows. Fewer, clearer tasks beat many.
 - If you cannot write the plan (the spec has no leaves, or contradicts itself), send `blocked` with the reason

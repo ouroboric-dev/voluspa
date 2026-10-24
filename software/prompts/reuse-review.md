@@ -33,7 +33,7 @@ or the library function). If you cannot name it, it is not a finding.
 The report: a verdict of one line ("Nothing to remove." or "Remove or change N things."), and one finding for each
 thing: the task id, what it adds, what already does the job, and the smallest change to the plan. The fields are
 given in "Your answer" below. Hand the report back with `submit`; it is short, so no draft file is needed. With
-nothing to remove, the findings are empty. Nothing else. Do not write any file.
+nothing to remove, the findings are empty. Nothing else. Do not read or write anything outside your workspace, and write no file.
 
 If you cannot review the plan (it is empty or unreadable), send `blocked` with the reason. A person sees it.
 
