@@ -29,7 +29,7 @@ the code could be smaller.
 
 ## How to report
 
-Every finding has a location (`file:line`) and a claim in plain words: the case that goes wrong, what
+Your answer is the contract `ygg.review/v1`, in the form "Your answer" below gives. Every finding has a location (`file:line`) and a claim in plain words: the case that goes wrong, what
 happens, and the fix. No case, no finding. Use the ids `quality-1`, `quality-2`, ... in the order you find
 them, and keep an id for the same problem when you look again. If the work is good, report no findings.
 
