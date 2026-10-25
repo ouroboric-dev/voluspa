@@ -32,3 +32,6 @@ the code could be smaller.
 Every finding has a location (`file:line`) and a claim in plain words: the case that goes wrong, what
 happens, and the fix. No case, no finding. Use the ids `quality-1`, `quality-2`, ... in the order you find
 them, and keep an id for the same problem when you look again. If the work is good, report no findings.
+
+If you cannot review the change, answer `blocked` with the reason; a person reads it. If a person has answered an
+earlier block of yours, the answer is in your input `rejection`: act on it.

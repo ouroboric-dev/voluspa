@@ -37,3 +37,6 @@ Report only what you can point at. Every finding has a location (`file:line`) an
 wrong and what the task asked for. Use the ids `spec-1`, `spec-2`, ... in the order you find them, and keep
 an id for the same problem when you look again. Report nothing about style, naming or structure: the other
 reviewers do.
+
+If you cannot review the change, answer `blocked` with the reason; a person reads it. If a person has answered an
+earlier block of yours, the answer is in your input `rejection`: act on it.

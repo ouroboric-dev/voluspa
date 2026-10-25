@@ -114,14 +114,14 @@ nodes:
           - id: spec-compliance
             role: reviewer
             prompt: prompts/reviewer-spec.md
-            input: [task, change, open_findings, check_results]
+            input: [task, change, open_findings, check_results, rejection]
             output: ygg.review/v1
             max_turns: 20
             timeout: 10m
           - id: simplicity
             role: reviewer
             prompt: prompts/reviewer-simplicity.md
-            input: [task, change, open_findings, check_results]
+            input: [task, change, open_findings, check_results, rejection]
             output: ygg.review/v1
             skills: [ponytail-review]
             max_turns: 20
@@ -129,7 +129,7 @@ nodes:
           - id: quality
             role: reviewer
             prompt: prompts/reviewer-quality.md
-            input: [task, change, open_findings, check_results]
+            input: [task, change, open_findings, check_results, rejection]
             output: ygg.review/v1
             max_turns: 20
             timeout: 10m

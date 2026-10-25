@@ -254,9 +254,9 @@ func TestTheGraphDeclaresEveryNodesTypes(t *testing.T) {
 		"plan":            {[]string{"spec", "design", "decisions", "rejection", "refusal", "date"}, "ygg.plan/v1"},
 		"reuse-review":    {[]string{"plan", "spec", "rejection"}, "ygg.reuse-review/v1"},
 		"implement":       {[]string{"task", "open_findings", "check_results", "rejection", "refusal"}, "ygg.implement/v1"},
-		"spec-compliance": {[]string{"task", "change", "open_findings", "check_results"}, "ygg.review/v1"},
-		"simplicity":      {[]string{"task", "change", "open_findings", "check_results"}, "ygg.review/v1"},
-		"quality":         {[]string{"task", "change", "open_findings", "check_results"}, "ygg.review/v1"},
+		"spec-compliance": {[]string{"task", "change", "open_findings", "check_results", "rejection"}, "ygg.review/v1"},
+		"simplicity":      {[]string{"task", "change", "open_findings", "check_results", "rejection"}, "ygg.review/v1"},
+		"quality":         {[]string{"task", "change", "open_findings", "check_results", "rejection"}, "ygg.review/v1"},
 	}
 	type decl struct {
 		input  []string

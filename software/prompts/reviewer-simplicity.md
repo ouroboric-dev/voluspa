@@ -27,3 +27,6 @@ Each finding has a location (`file:line`), and a claim in plain words that says 
 needed or is wrong, and the smallest fix. Use the ids `simple-1`, `simple-2`, ... in the order you find them,
 and keep an id for the same problem when you look again. If the change is as simple as it can be, report no
 findings. Do not report style or naming.
+
+If you cannot review the change, answer `blocked` with the reason; a person reads it. If a person has answered an
+earlier block of yours, the answer is in your input `rejection`: act on it.
