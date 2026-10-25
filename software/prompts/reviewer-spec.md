@@ -33,7 +33,7 @@ Then:
 
 ## How to report
 
-Report only what you can point at. Every finding has a location (`file:line`) and a claim that says what is
+Your answer is the contract `ygg.review/v1`, in the form "Your answer" below gives. Report only what you can point at. Every finding has a location (`file:line`) and a claim that says what is
 wrong and what the task asked for. Use the ids `spec-1`, `spec-2`, ... in the order you find them, and keep
 an id for the same problem when you look again. Report nothing about style, naming or structure: the other
 reviewers do.

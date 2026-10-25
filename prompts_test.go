@@ -33,6 +33,8 @@ func blocks(text string) []string {
 	return out
 }
 
+var retroPrompts = []string{"retro.md"}
+
 var planningPrompts = []string{"design.md", "spec.md", "conformance.md", "plan.md", "reuse-review.md"}
 
 // The reviewers' prompts; a leaf realm's implementer prompt is the realm's own.
@@ -65,7 +67,7 @@ func TestEveryBuildPromptIsThereAndKeepsTheBenchmarkOutOfAgentsReach(t *testing.
 // A planning agent hands back typed output; no prompt asks for a file under out/ that Odin once collected, or for the date
 // from a shell (the date is the input `date`).
 func TestNoPromptAsksForAFileOrTheDate(t *testing.T) {
-	for _, name := range append(append([]string{}, planningPrompts...), buildPrompts...) {
+	for _, name := range append(append(append([]string{}, planningPrompts...), buildPrompts...), retroPrompts...) {
 		text := prompt(t, name)
 		for _, bad := range []string{"out/1-product", "out/2-engineering", "out/leaves.yaml", "out/conformance.json", "date +%F", "reviewed/", "docs/1-product", "docs/2-engineering", "docs/leaves.yaml"} {
 			if strings.Contains(text, bad) {
@@ -79,7 +81,7 @@ func TestNoPromptAsksForAFileOrTheDate(t *testing.T) {
 // schema are Odin's to append, so a prompt points at "Your answer" and does not repeat the schema.
 // Odin renders an input as "## Input: <name>", so no prompt points at a section by another name.
 func TestNoPromptNamesAStaleSection(t *testing.T) {
-	for _, name := range append(append([]string{}, planningPrompts...), buildPrompts...) {
+	for _, name := range append(append(append([]string{}, planningPrompts...), buildPrompts...), retroPrompts...) {
 		text := prompt(t, name)
 		for _, bad := range []string{`under "Brief"`, `"The change"`, `("Your task")`} {
 			if strings.Contains(text, bad) {
@@ -213,9 +215,6 @@ func TestTheReviewersSayWhatToLookAtAndHowToNameFindings(t *testing.T) {
 			t.Errorf("%s talks of committing; a reviewer changes nothing", name)
 		}
 	}
-	if !strings.Contains(prompt(t, "reviewer-simplicity.md"), "The skill below") || !strings.Contains(prompt(t, "reuse-review.md"), "The skill below") {
-		t.Error("a prompt that relies on the vendored skill must say that the skill follows it")
-	}
 }
 
 // The spec prompt names the runtime the product runs on, the leaves and the variables; the plan prompt
@@ -288,6 +287,65 @@ func TestTheReviewerPromptsReadTheChangeSectionAndRunNoGit(t *testing.T) {
 			if strings.Contains(text, bad) {
 				t.Errorf("%s tells the reviewer to run %q; a reviewer has no shell", name, bad)
 			}
+		}
+	}
+}
+
+// The answer's form is Odin's to append, under "Your answer", with the schema; a reviewer prompt holds no example of it.
+func TestNoReviewerPromptHoldsAJSONExample(t *testing.T) {
+	for _, name := range buildPrompts {
+		text := prompt(t, name)
+		if b := blocks(text); len(b) > 0 {
+			t.Errorf("%s holds a fenced block %q; the form of the answer is under \"Your answer\"", name, b[0])
+		}
+		for _, bad := range []string{`"findings"`, `"source"`, `"severity"`, `"claim"`, `"location"`, `{"`} {
+			if strings.Contains(text, bad) {
+				t.Errorf("%s holds %s, a piece of a JSON example", name, bad)
+			}
+		}
+		if !strings.Contains(text, "Your answer") || !strings.Contains(text, "ygg.review/v1") {
+			t.Errorf("%s does not point to \"Your answer\" and name the contract ygg.review/v1", name)
+		}
+	}
+}
+
+// Odin renders a node's skills after its prompt, under "## Skills", each as "### <name>"; a prompt that relies on a skill
+// says so in those words.
+func TestPromptsThatRelyOnASkillNameItsSection(t *testing.T) {
+	for _, name := range []string{"reviewer-simplicity.md", "reuse-review.md", "retro.md"} {
+		if !strings.Contains(strings.Join(strings.Fields(prompt(t, name)), " "), `the "Skills" section below`) {
+			t.Errorf("%s does not point to the \"Skills\" section below", name)
+		}
+	}
+}
+
+func TestTheRetroPromptWrapsTheSkillAndAsksForEvidence(t *testing.T) {
+	raw := prompt(t, "retro.md")
+	text := strings.Join(strings.Fields(raw), " ")
+	sensible(t, []string{"retro.md"})
+	if len(blocks(raw)) > 0 || strings.Contains(raw, `"$schema"`) || strings.Contains(raw, `{"`) {
+		t.Error("retro.md holds a code block or a JSON example; Odin appends the answer and its schema")
+	}
+	for _, want := range []string{
+		"ygg.retro/v1", "Your answer", "`submit`", "`blocked`", "`record`", "`transcripts/`", "`ledger.jsonl`",
+		"navigation", "automated-checks", "coding-standards", "agents-md", "tool-economy", "information-access", "other",
+		"`went_well`", "`went_wrong`", "`suggestions`", "`category`", "`severity`", "`block`", "`evidence`",
+		"high", "medium", "low",
+		"`task:ID`", "`finding:ID`", "`ledger:SEQ`", "`transcript:NAME`", "`record:PATH`",
+		"totals only", "the run was not graded", "tasks.0.attempts", "You change nothing outside your workspace", "workspace note below",
+		"outside your workspace", `the "Skills" section below`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("retro.md lacks %q", want)
+		}
+	}
+	if strings.Contains(text, "workspace note above") || strings.Contains(text, "You change no file") {
+		t.Error("retro.md points the workspace note above the prompt, or says the retro changes no file; out/ is for drafts")
+	}
+	// The skill asks for tools this session does not have; the prompt says what to do instead.
+	for _, want := range []string{"writing-for-agents", "answer with `submit`"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("retro.md lacks %q: the skill's steps 1, 2 and 4 do not fit this session", want)
 		}
 	}
 }

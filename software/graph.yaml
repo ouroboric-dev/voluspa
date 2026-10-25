@@ -3,7 +3,7 @@
 # templates, and then, for every task, a loop of the implementer with the check ladder and three reviewers, the
 # merge gate, the pointer-contract gate (it judges the move after it: a contract change is a person's decision,
 # spec §3.4) and the pointer move with the acceptance run, which ships the routing indexes (spec §8). The roles
-# are the operator's factory.yaml roles: planner, implementer and reviewer.
+# are the operator's factory.yaml roles: planner, implementer, reviewer and retrospective.
 #
 # Schema 2 (change typed-boundaries): each agent, loop and reviewer declares the inputs its prompt is built from and
 # the one contract it returns. A node a gate or the secret scan re-runs (the planners, and the reuse review, which
@@ -156,3 +156,19 @@ nodes:
         generated: [REPOS.md, .ygg/impact.json]
         timeout: 25m
         back_to: implement
+  # The grade stops the sandboxes and grades the product; the retrospective runs after it, reads the record (the grade as
+  # totals only), the ledger copy and the transcripts, and returns the retro. Its role, retrospective, is the operator's
+  # factory.yaml role, so the judge stays fixed across compared runs.
+  - id: grade
+    kind: grade
+  - id: retro
+    kind: agent
+    role: retrospective
+    prompt: prompts/retro.md
+    # Not read_only: gungnir refuses that on a scratch agent, whose workspace is its own and holds the answer's drafts.
+    scratch: true
+    skills: [retro]
+    input: [record]
+    output: ygg.retro/v1
+    max_turns: 40
+    timeout: 30m
