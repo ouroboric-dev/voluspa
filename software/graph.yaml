@@ -3,16 +3,22 @@
 # templates, and then, for every task, a loop of the implementer with the check ladder and three reviewers, the
 # merge gate, the pointer-contract gate (it judges the move after it: a contract change is a person's decision,
 # spec §3.4) and the pointer move with the acceptance run, which ships the routing indexes (spec §8). The roles
-# are the operator's factory.yaml roles: planner, implementer and reviewer.
+# are the operator's factory.yaml roles: planner, implementer, reviewer and retrospective.
+#
+# Schema 2 (change typed-boundaries): each agent, loop and reviewer declares the inputs its prompt is built from and
+# the one contract it returns. A node a gate or the secret scan re-runs (the planners, and the reuse review, which
+# reuse-docs publishes) declares `rejection`, and a node a back_to names declares `refusal`.
 name: software
 version: 0.1.0
-schema: 1
+schema: 2
 nodes:
   - id: design
     kind: agent
     role: planner
     prompt: prompts/design.md
     scratch: true
+    input: [brief, decisions, rejection, date]
+    output: ygg.design/v1
     max_turns: 30
     timeout: 20m
   - id: design-gate
@@ -27,7 +33,8 @@ nodes:
     role: planner
     prompt: prompts/spec.md
     scratch: true
-    inputs: [docs/1-product]
+    input: [design, decisions, brief, rejection, refusal, date]
+    output: ygg.spec/v1
     max_turns: 40
     timeout: 30m
   - id: conformance
@@ -36,7 +43,8 @@ nodes:
     prompt: prompts/conformance.md
     scratch: true
     reviews: spec
-    inputs: [docs/1-product]
+    input: [spec, design]
+    output: ygg.conformance/v1
     max_turns: 15
     # F2: the rehearsal's conformance reviewer ran out its 10-minute session on a ~62 KB review.
     timeout: 20m
@@ -54,7 +62,8 @@ nodes:
     role: planner
     prompt: prompts/plan.md
     scratch: true
-    inputs: [docs/1-product, docs/2-engineering/specs, docs/leaves.yaml]
+    input: [spec, design, decisions, rejection, refusal, date]
+    output: ygg.plan/v1
     max_turns: 40
     timeout: 30m
   - id: reuse-review
@@ -63,7 +72,8 @@ nodes:
     prompt: prompts/reuse-review.md
     scratch: true
     reviews: plan
-    inputs: [docs/2-engineering/specs, docs/leaves.yaml]
+    input: [plan, spec, rejection]
+    output: ygg.reuse-review/v1
     skills: [ponytail-review]
     max_turns: 15
     timeout: 10m
@@ -77,7 +87,7 @@ nodes:
     to: docs
   - id: ready
     kind: tasks
-    from: docs/2-engineering/plans/*/tasks.md
+    from: plan
     leaves: docs/leaves.yaml
     back_to: plan
   - id: leaves
@@ -95,6 +105,8 @@ nodes:
         kind: loop
         realm: leaf
         role: implementer
+        input: [task, open_findings, check_results, rejection, refusal]
+        output: ygg.implement/v1
         attempts: 3
         max_turns: 60
         timeout: 30m
@@ -102,17 +114,23 @@ nodes:
           - id: spec-compliance
             role: reviewer
             prompt: prompts/reviewer-spec.md
+            input: [task, change, open_findings, check_results, rejection]
+            output: ygg.review/v1
             max_turns: 20
             timeout: 10m
           - id: simplicity
             role: reviewer
             prompt: prompts/reviewer-simplicity.md
+            input: [task, change, open_findings, check_results, rejection]
+            output: ygg.review/v1
             skills: [ponytail-review]
             max_turns: 20
             timeout: 10m
           - id: quality
             role: reviewer
             prompt: prompts/reviewer-quality.md
+            input: [task, change, open_findings, check_results, rejection]
+            output: ygg.review/v1
             max_turns: 20
             timeout: 10m
       - id: feature-gate
@@ -138,3 +156,20 @@ nodes:
         generated: [REPOS.md, .ygg/impact.json]
         timeout: 25m
         back_to: implement
+  # The grade stops the sandboxes and grades the product; Odin skips it when factory.yaml has no grader. The
+  # retrospective runs after it, reads the record (the grade as totals only, if any), the ledger copy and the
+  # transcripts, and returns the retro. Its role, retrospective, is the operator's factory.yaml role, so the judge
+  # stays fixed across compared runs.
+  - id: grade
+    kind: grade
+  - id: retro
+    kind: agent
+    role: retrospective
+    prompt: prompts/retro.md
+    # Not read_only: gungnir refuses that on a scratch agent, whose workspace is its own and holds the answer's drafts.
+    scratch: true
+    skills: [retro]
+    input: [record]
+    output: ygg.retro/v1
+    max_turns: 40
+    timeout: 30m

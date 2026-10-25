@@ -33,6 +33,8 @@ func blocks(text string) []string {
 	return out
 }
 
+var retroPrompts = []string{"retro.md"}
+
 var planningPrompts = []string{"design.md", "spec.md", "conformance.md", "plan.md", "reuse-review.md"}
 
 // The reviewers' prompts; a leaf realm's implementer prompt is the realm's own.
@@ -62,19 +64,75 @@ func TestEveryBuildPromptIsThereAndKeepsTheBenchmarkOutOfAgentsReach(t *testing.
 	sensible(t, buildPrompts)
 }
 
-func TestThePlanningPromptsSayWhereTheirDocumentsGo(t *testing.T) {
-	for name, paths := range map[string][]string{
-		"design.md":       {"out/1-product/design/<date>-<slug>.md"},
-		"spec.md":         {"out/2-engineering/specs/<date>-<slug>.md", "out/leaves.yaml", "docs/1-product/design/"},
-		"conformance.md":  {"out/conformance.json", "reviewed/2-engineering/specs/", "reviewed/leaves.yaml", "docs/1-product/design/"},
-		"plan.md":         {"out/2-engineering/plans/<date>-<slug>/", "docs/leaves.yaml", "docs/2-engineering/specs/"},
-		"reuse-review.md": {"out/2-engineering/reviews/<date>-<slug>-reuse-review.md", "reviewed/2-engineering/plans/"},
+// A planning agent hands back typed output; no prompt asks for a file under out/ that Odin once collected, or for the date
+// from a shell (the date is the input `date`).
+func TestNoPromptAsksForAFileOrTheDate(t *testing.T) {
+	for _, name := range append(append(append([]string{}, planningPrompts...), buildPrompts...), retroPrompts...) {
+		text := prompt(t, name)
+		for _, bad := range []string{"out/1-product", "out/2-engineering", "out/leaves.yaml", "out/conformance.json", "date +%F", "reviewed/", "docs/1-product", "docs/2-engineering", "docs/leaves.yaml"} {
+			if strings.Contains(text, bad) {
+				t.Errorf("%s holds %q; the inputs come in the prompt and the output goes back through submit", name, bad)
+			}
+		}
+	}
+}
+
+// Each planning prompt names its contract, its inputs by name, and how to hand the output back. The field list and the
+// schema are Odin's to append, so a prompt points at "Your answer" and does not repeat the schema.
+// Odin renders an input as "## Input: <name>", so no prompt points at a section by another name.
+func TestNoPromptNamesAStaleSection(t *testing.T) {
+	for _, name := range append(append(append([]string{}, planningPrompts...), buildPrompts...), retroPrompts...) {
+		text := prompt(t, name)
+		for _, bad := range []string{`under "Brief"`, `"The change"`, `("Your task")`} {
+			if strings.Contains(text, bad) {
+				t.Errorf("%s holds %q; Odin renders each input as ## Input: <name>", name, bad)
+			}
+		}
+	}
+	for _, name := range planningPrompts {
+		if !strings.Contains(prompt(t, name), "outside your workspace") {
+			t.Errorf("%s lacks the workspace rule", name)
+		}
+	}
+}
+
+func TestEachPlanningPromptNamesItsContract(t *testing.T) {
+	big := map[string]bool{"spec.md": true, "plan.md": true}
+	for name, w := range map[string]struct {
+		contract string
+		inputs   []string
+	}{
+		"design.md":       {"ygg.design/v1", []string{"`brief`", "`decisions`", "`rejection`", "`date`"}},
+		"spec.md":         {"ygg.spec/v1", []string{"`design`", "`decisions`", "`brief`", "`rejection`", "`refusal`", "`date`"}},
+		"conformance.md":  {"ygg.conformance/v1", []string{"`spec`", "`design`"}},
+		"plan.md":         {"ygg.plan/v1", []string{"`spec`", "`design`", "`decisions`", "`rejection`", "`refusal`", "`date`"}},
+		"reuse-review.md": {"ygg.reuse-review/v1", []string{"`plan`", "`spec`", "`rejection`"}},
 	} {
 		text := prompt(t, name)
-		for _, p := range paths {
-			if !strings.Contains(text, p) {
-				t.Errorf("%s does not mention %s", name, p)
+		for _, want := range append([]string{w.contract, "Your answer", "`submit`", "`blocked`"}, w.inputs...) {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s does not mention %s", name, want)
 			}
+		}
+		for _, large := range []string{"out/", "`check`"} {
+			if has := strings.Contains(text, large); has != big[name] {
+				t.Errorf("%s mentions %s: %v; only a large output is drafted in a file and checked", name, large, has)
+			}
+		}
+		if big[name] && !strings.Contains(text, ".json") {
+			t.Errorf("%s does not name the draft file", name)
+		}
+		if strings.Contains(text, `"$schema"`) || strings.Contains(text, `"additionalProperties"`) {
+			t.Errorf("%s repeats the schema; Odin appends it", name)
+		}
+	}
+	if !strings.Contains(prompt(t, "design.md"), "`q1`") {
+		t.Error("design.md does not ask for open question ids q1, q2, ...")
+	}
+	spec := prompt(t, "spec.md")
+	for _, want := range []string{"`decisions[].cites`", "`deviations[].cites`"} {
+		if !strings.Contains(spec, want) {
+			t.Errorf("spec.md does not tell the agent to cite the owner decisions in %s", want)
 		}
 	}
 }
@@ -95,25 +153,26 @@ func TestTheConformancePromptsExamplesAreVerdictsOdinReads(t *testing.T) {
 	}
 }
 
-// The task the plan prompt shows is a task Odin reads, and a ready one; the leaves file the spec prompt shows
+// The task the plan prompt shows is a task of the plan contract, and a ready one; the leaves file the spec prompt shows
 // is a leaves file Odin reads.
-func TestThePlanAndSpecPromptsExamplesAreFilesOdinReads(t *testing.T) {
+func TestThePlanAndSpecPromptsExamplesAreDocumentsOdinReads(t *testing.T) {
 	var task string
 	for _, b := range blocks(prompt(t, "plan.md")) {
-		if strings.Contains(b, "**Named test:**") {
+		if strings.Contains(b, `"named_test"`) {
 			task = b
 		}
 	}
 	if task == "" {
 		t.Fatal("the plan prompt shows no task")
 	}
-	task = strings.NewReplacer("<plan>", "gallery", "<title>", "the API stores galleries", "<a thing that is true when the task is done>", "a gallery can be created", "<another>", "a gallery has a name",
-		"<the test file and test name that proves it>", "gallery_test.go TestCreateGallery").Replace(task)
-	fs, err := schema.ParseTasks("tasks.md", []byte(task))
-	if err != nil || len(fs) != 1 {
-		t.Fatalf("ParseTasks() = %v, %v", fs, err)
+	task = strings.NewReplacer("<slug>", "gallery", "<title>", "the API stores galleries", "<a thing that is true when the task is done>", "a gallery can be created", "<another>", "a gallery has a name",
+		"<the test file and test name that proves it>", "gallery_test.go TestCreateGallery", "<behaviour, routes, fields, limits and errors>", "POST /galleries creates one.").Replace(task)
+	doc := `{"title": "Gallery", "slug": "gallery", "goal": "Galleries.", "decisions": [], "risks": [], "tasks": [` + task + `]}`
+	plan, err := schema.Decode[schema.Plan](schema.ContractPlan, []byte(doc))
+	if err != nil || len(plan.Tasks) != 1 {
+		t.Fatalf("Decode(plan) = %+v, %v", plan, err)
 	}
-	if err := schema.CheckReady(fs, []string{"repos/api"}); err != nil {
+	if err := schema.CheckReady(schema.FeaturesFromPlan(plan), []string{"repos/api"}); err != nil {
 		t.Errorf("the example task is not ready: %v", err)
 	}
 	var leaves string
@@ -144,7 +203,7 @@ func TestTheSpecPromptNamesTheGallerysRealmsAtTheirVersions(t *testing.T) {
 func TestTheReviewersSayWhatToLookAtAndHowToNameFindings(t *testing.T) {
 	for name, ids := range map[string]string{"reviewer-spec.md": "spec-1", "reviewer-simplicity.md": "simple-1", "reviewer-quality.md": "quality-1"} {
 		text := prompt(t, name)
-		for _, want := range []string{"read-only", `"The change"`, ids, "file:line", "**blocker**"} {
+		for _, want := range []string{"read-only", "`change`", ids, "file:line", "**blocker**"} {
 			if want == "**blocker**" && name == "reviewer-simplicity.md" {
 				want = "**Must fix**"
 			}
@@ -155,9 +214,6 @@ func TestTheReviewersSayWhatToLookAtAndHowToNameFindings(t *testing.T) {
 		if strings.Contains(text, "git commit") {
 			t.Errorf("%s talks of committing; a reviewer changes nothing", name)
 		}
-	}
-	if !strings.Contains(prompt(t, "reviewer-simplicity.md"), "The skill below") || !strings.Contains(prompt(t, "reuse-review.md"), "The skill below") {
-		t.Error("a prompt that relies on the vendored skill must say that the skill follows it")
 	}
 }
 
@@ -224,13 +280,72 @@ func TestReviewerNamesThePhotoRule(t *testing.T) {
 func TestTheReviewerPromptsReadTheChangeSectionAndRunNoGit(t *testing.T) {
 	for _, name := range buildPrompts {
 		text := prompt(t, name)
-		if !strings.Contains(text, `"The change"`) {
-			t.Errorf("%s does not name the section \"The change\"", name)
+		if !strings.Contains(text, "your input `change`") {
+			t.Errorf("%s does not name the input `change`", name)
 		}
 		for _, bad := range []string{"git diff", "git merge-base"} {
 			if strings.Contains(text, bad) {
 				t.Errorf("%s tells the reviewer to run %q; a reviewer has no shell", name, bad)
 			}
+		}
+	}
+}
+
+// The answer's form is Odin's to append, under "Your answer", with the schema; a reviewer prompt holds no example of it.
+func TestNoReviewerPromptHoldsAJSONExample(t *testing.T) {
+	for _, name := range buildPrompts {
+		text := prompt(t, name)
+		if b := blocks(text); len(b) > 0 {
+			t.Errorf("%s holds a fenced block %q; the form of the answer is under \"Your answer\"", name, b[0])
+		}
+		for _, bad := range []string{`"findings"`, `"source"`, `"severity"`, `"claim"`, `"location"`, `{"`} {
+			if strings.Contains(text, bad) {
+				t.Errorf("%s holds %s, a piece of a JSON example", name, bad)
+			}
+		}
+		if !strings.Contains(text, "Your answer") || !strings.Contains(text, "ygg.review/v1") {
+			t.Errorf("%s does not point to \"Your answer\" and name the contract ygg.review/v1", name)
+		}
+	}
+}
+
+// Odin renders a node's skills after its prompt, under "## Skills", each as "### <name>"; a prompt that relies on a skill
+// says so in those words.
+func TestPromptsThatRelyOnASkillNameItsSection(t *testing.T) {
+	for _, name := range []string{"reviewer-simplicity.md", "reuse-review.md", "retro.md"} {
+		if !strings.Contains(strings.Join(strings.Fields(prompt(t, name)), " "), `the "Skills" section below`) {
+			t.Errorf("%s does not point to the \"Skills\" section below", name)
+		}
+	}
+}
+
+func TestTheRetroPromptWrapsTheSkillAndAsksForEvidence(t *testing.T) {
+	raw := prompt(t, "retro.md")
+	text := strings.Join(strings.Fields(raw), " ")
+	sensible(t, []string{"retro.md"})
+	if len(blocks(raw)) > 0 || strings.Contains(raw, `"$schema"`) || strings.Contains(raw, `{"`) {
+		t.Error("retro.md holds a code block or a JSON example; Odin appends the answer and its schema")
+	}
+	for _, want := range []string{
+		"ygg.retro/v1", "Your answer", "`submit`", "`blocked`", "`record`", "`transcripts/`", "`ledger.jsonl`",
+		"navigation", "automated-checks", "coding-standards", "agents-md", "tool-economy", "information-access", "other",
+		"`went_well`", "`went_wrong`", "`suggestions`", "`category`", "`severity`", "`block`", "`evidence`",
+		"high", "medium", "low",
+		"`task:ID`", "`finding:ID`", "`ledger:SEQ`", "`transcript:NAME`", "`record:PATH`",
+		"totals only", "the run was not graded", "tasks.0.attempts", "You change nothing outside your workspace", "workspace note below",
+		"outside your workspace", `the "Skills" section below`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("retro.md lacks %q", want)
+		}
+	}
+	if strings.Contains(text, "workspace note above") || strings.Contains(text, "You change no file") {
+		t.Error("retro.md points the workspace note above the prompt, or says the retro changes no file; out/ is for drafts")
+	}
+	// The skill asks for tools this session does not have; the prompt says what to do instead.
+	for _, want := range []string{"writing-for-agents", "answer with `submit`"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("retro.md lacks %q: the skill's steps 1, 2 and 4 do not fit this session", want)
 		}
 	}
 }

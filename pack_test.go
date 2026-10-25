@@ -35,6 +35,18 @@ func loadGraph(t *testing.T) *schema.Graph {
 	return g
 }
 
+// taskBody is the body of the graph's foreach, the loop every task runs; the grade and the retro come after it.
+func taskBody(t *testing.T, g *schema.Graph) []schema.Node {
+	t.Helper()
+	for _, n := range g.Nodes {
+		if n.Kind == schema.KindForeach {
+			return n.Body
+		}
+	}
+	t.Fatal("the graph has no foreach")
+	return nil
+}
+
 func names(t *testing.T, dir string) []string {
 	t.Helper()
 	entries, err := os.ReadDir(dir)
@@ -56,13 +68,13 @@ func TestTheSoftwarePackHoldsAGraphAndItsPromptsOnly(t *testing.T) {
 	if p.HoldsRecipe() {
 		t.Error("the software pack holds a recipe (checks, leaf, leaves, sandbox or services); a graph pack holds none")
 	}
-	if g := loadGraph(t); g.Schema != 1 {
-		t.Errorf("graph schema = %d, want 1", g.Schema)
+	if g := loadGraph(t); g.Schema != 2 {
+		t.Errorf("graph schema = %d, want 2", g.Schema)
 	}
 	if got := names(t, softwareDir); !slices.Equal(got, []string{"graph.yaml", "pack.yaml", "prompts"}) {
 		t.Errorf("software/ holds %v, want graph.yaml, pack.yaml and prompts/", got)
 	}
-	want := []string{"conformance.md", "design.md", "plan.md", "reuse-review.md", "reviewer-quality.md", "reviewer-simplicity.md", "reviewer-spec.md", "spec.md"}
+	want := []string{"conformance.md", "design.md", "plan.md", "retro.md", "reuse-review.md", "reviewer-quality.md", "reviewer-simplicity.md", "reviewer-spec.md", "spec.md"}
 	if got := names(t, filepath.Join(softwareDir, "prompts")); !slices.Equal(got, want) {
 		t.Errorf("software/prompts/ holds %v, want %v", got, want)
 	}
@@ -95,7 +107,7 @@ func TestTheGraphHasTheStagesOfSpecSection42InOrder(t *testing.T) {
 	for _, n := range g.Nodes {
 		ids = append(ids, n.ID)
 	}
-	want := "design,design-gate,design-docs,spec,conformance,spec-gate,spec-docs,plan,reuse-review,plan-docs,reuse-docs,ready,leaves,plan-gate,tasks"
+	want := "design,design-gate,design-docs,spec,conformance,spec-gate,spec-docs,plan,reuse-review,plan-docs,reuse-docs,ready,leaves,plan-gate,tasks,grade,retro"
 	if strings.Join(ids, ",") != want {
 		t.Errorf("nodes = %v", ids)
 	}
@@ -126,7 +138,7 @@ func TestTheGraphHasTheStagesOfSpecSection42InOrder(t *testing.T) {
 // The acceptance check itself is defined by the leaf realm that has one (midgard-react), so the graph only names it.
 func TestEveryTaskRunsTheLoopWithThreeReviewersThenTheGatesAndTheMoveWithAcceptance(t *testing.T) {
 	g := loadGraph(t)
-	body := g.Nodes[len(g.Nodes)-1].Body
+	body := taskBody(t, g)
 	var ids []string
 	for _, n := range body {
 		ids = append(ids, n.ID)
@@ -183,7 +195,7 @@ func TestEveryPromptIsUsedAndEveryPromptTheGraphNamesIsThere(t *testing.T) {
 		}
 	}
 	for r := range roles {
-		if !slices.Contains([]string{"planner", "implementer", "reviewer"}, r) {
+		if !slices.Contains([]string{"planner", "implementer", "reviewer", "retrospective"}, r) {
 			t.Errorf("the graph uses the role %q, which an operator's factory.yaml is not told to define", r)
 		}
 	}
@@ -193,7 +205,7 @@ func TestEveryPromptIsUsedAndEveryPromptTheGraphNamesIsThere(t *testing.T) {
 // that follows it, so it comes after the leaf has landed and before the move. The move also ships the routing
 // indexes (spec §8): Odin builds REPOS.md's wiring block and .ygg/impact.json, and the shrink guard reads them.
 func TestTheContractGateComesBeforeTheMoveAndTheMoveShipsTheRoutingIndexes(t *testing.T) {
-	body := loadGraph(t).Nodes[len(loadGraph(t).Nodes)-1].Body
+	body := taskBody(t, loadGraph(t))
 	by := map[string]int{}
 	for i, n := range body {
 		by[n.ID] = i
@@ -221,7 +233,7 @@ func TestConformanceHasTwentyMinutes(t *testing.T) {
 	if got := time.Duration(by["conformance"].Timeout); got != 20*time.Minute {
 		t.Errorf("conformance timeout = %v, want 20m (F2)", got)
 	}
-	body := g.Nodes[len(g.Nodes)-1].Body
+	body := taskBody(t, g)
 	reviewers := 0
 	for _, n := range body {
 		for _, r := range n.Reviewers {
@@ -233,5 +245,98 @@ func TestConformanceHasTwentyMinutes(t *testing.T) {
 	}
 	if reviewers != 3 {
 		t.Errorf("the task loop has %d reviewers, want 3", reviewers)
+	}
+}
+
+// The graph declares what every node takes and hands back (change typed-boundaries). ParseGraph runs CheckTypes, which
+// refuses a join that does not type-check, a gate's re-run target that lacks rejection and a back_to target that lacks
+// refusal; this test names the declarations too, so a change to one is a change to this list.
+func TestTheGraphDeclaresEveryNodesTypes(t *testing.T) {
+	g := loadGraph(t)
+	if err := g.CheckTypes(); err != nil {
+		t.Fatalf("CheckTypes() = %v", err)
+	}
+	want := map[string]struct {
+		input  []string
+		output string
+	}{
+		"design":          {[]string{"brief", "decisions", "rejection", "date"}, "ygg.design/v1"},
+		"spec":            {[]string{"design", "decisions", "brief", "rejection", "refusal", "date"}, "ygg.spec/v1"},
+		"conformance":     {[]string{"spec", "design"}, "ygg.conformance/v1"},
+		"plan":            {[]string{"spec", "design", "decisions", "rejection", "refusal", "date"}, "ygg.plan/v1"},
+		"reuse-review":    {[]string{"plan", "spec", "rejection"}, "ygg.reuse-review/v1"},
+		"implement":       {[]string{"task", "open_findings", "check_results", "rejection", "refusal"}, "ygg.implement/v1"},
+		"spec-compliance": {[]string{"task", "change", "open_findings", "check_results", "rejection"}, "ygg.review/v1"},
+		"simplicity":      {[]string{"task", "change", "open_findings", "check_results", "rejection"}, "ygg.review/v1"},
+		"quality":         {[]string{"task", "change", "open_findings", "check_results", "rejection"}, "ygg.review/v1"},
+		"retro":           {[]string{"record"}, "ygg.retro/v1"},
+	}
+	type decl struct {
+		input  []string
+		output string
+	}
+	by := map[string]decl{}
+	for _, n := range g.All() {
+		by[n.ID] = decl{n.Input, n.Output}
+		for _, r := range n.Reviewers {
+			by[r.ID] = decl{r.Input, r.Output}
+		}
+	}
+	for id, w := range want {
+		n, ok := by[id]
+		if !ok {
+			t.Errorf("the graph has no node %s", id)
+			continue
+		}
+		if !slices.Equal(n.input, w.input) || n.output != w.output {
+			t.Errorf("%s declares input %v and output %q, want %v and %q", id, n.input, n.output, w.input, w.output)
+		}
+	}
+	// A kind that declares neither is not an agent, a loop or a reviewer.
+	for id, d := range by {
+		if _, ok := want[id]; !ok && (len(d.input) > 0 || d.output != "") {
+			t.Errorf("%s declares input %v and output %q; it is not an agent, a loop or a reviewer", id, d.input, d.output)
+		}
+	}
+	// The secret scan stops a publish and re-runs the node it publishes with a rejection (the founder's decision), and a
+	// plan goes back to its planner with a refusal.
+	for _, n := range g.All() {
+		if n.Kind == schema.KindPublish && !slices.Contains(by[n.From].input, schema.SourceRejection) {
+			t.Errorf("%s publishes %s, which does not declare rejection for the secret scan's re-run", n.ID, n.From)
+		}
+		if n.BackTo != "" && !slices.Contains(by[n.BackTo].input, schema.SourceRefusal) {
+			t.Errorf("%s goes back to %s, which does not declare refusal", n.ID, n.BackTo)
+		}
+	}
+	for _, n := range g.Nodes {
+		if n.Kind == schema.KindTasks && n.From != "plan" {
+			t.Errorf("the tasks node reads %q, want the plan node", n.From)
+		}
+	}
+	if len(taskBody(t, g)) == 0 {
+		t.Error("the graph has an empty task loop")
+	}
+}
+
+// The retrospective runs after the grade (change typed-boundaries §5): the record it reads exists only then. It is its own
+// role, so the factory holds its model and CLI fixed across compared runs; it works in a scratch workspace (gungnir refuses read_only there) that
+// holds the transcripts and the ledger copy, and it reads the skill `retro`.
+func TestTheRetroComesAfterTheGrade(t *testing.T) {
+	g := loadGraph(t)
+	last := len(g.Nodes) - 1
+	if last < 2 || g.Nodes[last-1].Kind != schema.KindGrade || g.Nodes[last-1].ID != "grade" || g.Nodes[last].ID != "retro" {
+		t.Fatalf("the graph ends with %+v; want grade then retro", g.Nodes[max(0, last-1):])
+	}
+	if g.Nodes[last-2].Kind != schema.KindForeach {
+		t.Errorf("the grade follows %+v; it follows the task loop, once every sandbox is done", g.Nodes[last-2])
+	}
+	n := g.Nodes[last]
+	if n.Kind != schema.KindAgent || n.Role != "retrospective" || n.ReadOnly || !n.Scratch || n.Repo != "" ||
+		n.Prompt != "prompts/retro.md" || !slices.Equal(n.Skills, []string{"retro"}) || !slices.Equal(n.Input, []string{"record"}) ||
+		n.Output != "ygg.retro/v1" || n.MaxTurns != 40 || time.Duration(n.Timeout) != 30*time.Minute {
+		t.Errorf("retro = %+v", n)
+	}
+	if err := g.CheckTypes(); err != nil {
+		t.Errorf("CheckTypes() = %v", err)
 	}
 }

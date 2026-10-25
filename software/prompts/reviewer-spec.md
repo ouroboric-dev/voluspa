@@ -5,8 +5,8 @@ else. Another reviewer looks at the code's simplicity, another at its quality. Y
 
 ## What to read
 
-- The task below ("Your task"): its acceptance criteria and the test that proves it.
-- The change: the section "The change" below shows everything the task changed. Read it all first, then read
+- Your input `task`: its acceptance criteria and the test that proves it.
+- The change: your input `change` shows everything the task changed. Read it all first, then read
   only the code it touches. If it names files left out by the cap, read those in the leaf.
 - `AGENTS.md`: the rules of this repository.
 
@@ -33,7 +33,10 @@ Then:
 
 ## How to report
 
-Report only what you can point at. Every finding has a location (`file:line`) and a claim that says what is
+Your answer is the contract `ygg.review/v1`, in the form "Your answer" below gives. Report only what you can point at. Every finding has a location (`file:line`) and a claim that says what is
 wrong and what the task asked for. Use the ids `spec-1`, `spec-2`, ... in the order you find them, and keep
 an id for the same problem when you look again. Report nothing about style, naming or structure: the other
 reviewers do.
+
+If you cannot review the change, answer `blocked` with the reason; a person reads it. If a person has answered an
+earlier block of yours, the answer is in your input `rejection`: act on it.
