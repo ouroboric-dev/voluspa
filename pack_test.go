@@ -340,3 +340,24 @@ func TestTheRetroComesAfterTheGrade(t *testing.T) {
 		t.Errorf("CheckTypes() = %v", err)
 	}
 }
+
+func TestEveryPromptNamesOnlyItsInputs(t *testing.T) {
+	var graphs int
+	for _, name := range names(t, ".") {
+		if _, err := os.Stat(filepath.Join(name, "pack.yaml")); err != nil {
+			continue
+		}
+		graphs++
+		g, err := schema.LoadGraph(filepath.Join(name, "graph.yaml"))
+		if err != nil {
+			t.Errorf("LoadGraph(%s) = %v", name, err)
+			continue
+		}
+		if err := g.CheckPrompts(name); err != nil {
+			t.Errorf("%s: CheckPrompts() = %v", name, err)
+		}
+	}
+	if graphs == 0 {
+		t.Error("no folder holds a pack")
+	}
+}

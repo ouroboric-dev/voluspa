@@ -46,7 +46,7 @@ what worked, so that a change is not made against it. Each entry has:
 - `category`: one of the above.
 - `severity`: `high`, `medium` or `low`, by how much it cost the run or would cost the next one.
 - `text`: the observation in plain words: what happened, and for a suggestion, the change.
-- `block`: the block of the graph it targets (a node id such as `implement`, a prompt, a check, a gate), or the
+- `block`: the block of the graph it targets (a node id, such as implement, a prompt, a check, a gate), or the
   part of the factory outside the graph.
 - `evidence`: at least one pointer to what you read. Each is one of `task:ID`, `finding:ID`, `ledger:SEQ`,
   `transcript:NAME` or `record:PATH`. Use the id of a task or a finding as the record shows it, the `seq` of a
