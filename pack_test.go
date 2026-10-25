@@ -331,7 +331,7 @@ func TestTheRetroComesAfterTheGrade(t *testing.T) {
 		t.Errorf("the grade follows %+v; it follows the task loop, once every sandbox is done", g.Nodes[last-2])
 	}
 	n := g.Nodes[last]
-	if n.Kind != schema.KindAgent || n.Role != "retrospective" || !n.Scratch || n.Repo != "" ||
+	if n.Kind != schema.KindAgent || n.Role != "retrospective" || n.ReadOnly || !n.Scratch || n.Repo != "" ||
 		n.Prompt != "prompts/retro.md" || !slices.Equal(n.Skills, []string{"retro"}) || !slices.Equal(n.Input, []string{"record"}) ||
 		n.Output != "ygg.retro/v1" || n.MaxTurns != 40 || time.Duration(n.Timeout) != 30*time.Minute {
 		t.Errorf("retro = %+v", n)

@@ -313,7 +313,7 @@ func TestNoReviewerPromptHoldsAJSONExample(t *testing.T) {
 // says so in those words.
 func TestPromptsThatRelyOnASkillNameItsSection(t *testing.T) {
 	for _, name := range []string{"reviewer-simplicity.md", "reuse-review.md", "retro.md"} {
-		if !strings.Contains(prompt(t, name), `the "Skills" section below`) {
+		if !strings.Contains(strings.Join(strings.Fields(prompt(t, name)), " "), `the "Skills" section below`) {
 			t.Errorf("%s does not point to the \"Skills\" section below", name)
 		}
 	}
@@ -332,11 +332,15 @@ func TestTheRetroPromptWrapsTheSkillAndAsksForEvidence(t *testing.T) {
 		"`went_well`", "`went_wrong`", "`suggestions`", "`category`", "`severity`", "`block`", "`evidence`",
 		"high", "medium", "low",
 		"`task:ID`", "`finding:ID`", "`ledger:SEQ`", "`transcript:NAME`", "`record:PATH`",
-		"totals only", "outside your workspace", "read-only", `the "Skills" section below`,
+		"totals only", "the run was not graded", "tasks.0.attempts", "You change nothing outside your workspace", "workspace note below",
+		"outside your workspace", `the "Skills" section below`,
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("retro.md lacks %q", want)
 		}
+	}
+	if strings.Contains(text, "workspace note above") || strings.Contains(text, "You change no file") {
+		t.Error("retro.md points the workspace note above the prompt, or says the retro changes no file; out/ is for drafts")
 	}
 	// The skill asks for tools this session does not have; the prompt says what to do instead.
 	for _, want := range []string{"writing-for-agents", "answer with `submit`"} {

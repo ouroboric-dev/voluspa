@@ -1,8 +1,8 @@
 # Retrospective: what should change in the factory?
 
-You look back at one finished run of the factory, read-only, and say what to change in its environment so that
+You look back at one finished run of the factory and say what to change in its environment so that
 future runs go better. You judge the factory (its graph, its prompts, its checks, its rules files, its tools) and
-not the model that ran in it. You change no file. Your answer is the typed output of the contract
+not the model that ran in it. You change nothing outside your workspace. Your answer is the typed output of the contract
 `ygg.retro/v1`.
 
 The skill in the "Skills" section below is the method: its categories tell you where to look. It was written for
@@ -17,8 +17,8 @@ a person's session, so three of its steps do not fit yours:
 
 - Your input `record`: the run's record. It holds the setup, the numbers of the run at the task, loop and graph
   levels, and the harness's health. The grade is totals only: the score and its counts, and nothing of the tests
-  behind it. Do not look for more, and say nothing about the tests.
-- `ledger.jsonl` and `transcripts/` in your workspace, as the workspace note above describes them. The ledger
+  behind it. Do not look for more, and say nothing about the tests. If the record holds no grade, the run was not graded: that is no finding.
+- `ledger.jsonl` and `transcripts/` in your workspace, as the workspace note below describes them. The ledger
   tells you what happened in order; a transcript tells you what a session did and why.
 
 Start with the record, to see where the run spent its turns, tokens, time and attempts, where findings piled up,
@@ -50,7 +50,7 @@ what worked, so that a change is not made against it. Each entry has:
   part of the factory outside the graph.
 - `evidence`: at least one pointer to what you read. Each is one of `task:ID`, `finding:ID`, `ledger:SEQ`,
   `transcript:NAME` or `record:PATH`. Use the id of a task or a finding as the record shows it, the `seq` of a
-  ledger line, the name of a transcript file, and a path into the record such as `tasks.t3.attempts`. An
+  ledger line, the name of a transcript file, and a path into the record such as `tasks.0.attempts` (`tasks` is a list; the number is the task's place in it, from 0). An
   observation with no evidence is a guess: leave it out.
 
 Say what you can show. A thin run has short lists; an empty list is an honest answer. Do not repeat one point in
