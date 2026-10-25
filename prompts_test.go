@@ -104,7 +104,7 @@ func TestEachPlanningPromptNamesItsContract(t *testing.T) {
 	}{
 		"design.md":       {"ygg.design/v1", []string{"`brief`", "`decisions`", "`rejection`", "`date`"}},
 		"spec.md":         {"ygg.spec/v1", []string{"`design`", "`decisions`", "`brief`", "`rejection`", "`refusal`", "`date`"}},
-		"conformance.md":  {"ygg.conformance/v1", []string{"`spec`", "`design`"}},
+		"conformance.md":  {"ygg.conformance/v1", []string{"`spec`", "`design`", "`decisions`"}},
 		"plan.md":         {"ygg.plan/v1", []string{"`spec`", "`design`", "`decisions`", "`rejection`", "`refusal`", "`date`"}},
 		"reuse-review.md": {"ygg.reuse-review/v1", []string{"`plan`", "`spec`", "`rejection`"}},
 	} {
@@ -137,18 +137,40 @@ func TestEachPlanningPromptNamesItsContract(t *testing.T) {
 	}
 }
 
-// What the conformance prompt shows as the answer is an answer Odin accepts.
-func TestTheConformancePromptsExamplesAreVerdictsOdinReads(t *testing.T) {
-	text := prompt(t, "conformance.md")
-	for _, ex := range []string{`{"deviation": false}`, `{"deviation": true, "amendment": "<text>"}`} {
-		if !strings.Contains(text, ex) {
-			t.Fatalf("the prompt lacks the example %s", ex)
+// The owner's decisions bind the spec as the design does; a spec that follows one is not a deviation, and a spec that
+// contradicts one is (found in run 1, where the reviewer never saw them).
+func TestTheConformancePromptLetsTheOwnersDecisionsBindTheSpec(t *testing.T) {
+	text := strings.Join(strings.Fields(prompt(t, "conformance.md")), " ")
+	for _, want := range []string{
+		"input `decisions`",
+		"bind the spec as the design does",
+		"follows a decision",
+		"is not a deviation",
+		"contradicts a decision",
+		"is a deviation",
+		"When in doubt, it is a deviation",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("conformance.md lacks %q", want)
 		}
-		c, err := schema.ParseConformance([]byte(strings.ReplaceAll(ex, "<text>", "The spec adds offline mode.")))
-		if err != nil {
-			t.Errorf("%s: %v", ex, err)
-		} else if c.Deviation != strings.Contains(ex, "true") {
-			t.Errorf("%s was read as %+v", ex, c)
+	}
+}
+
+// Odin appends the answer's contract, so the conformance prompt holds no JSON example and names the fields in prose.
+func TestTheConformancePromptHoldsNoJSONExample(t *testing.T) {
+	raw := prompt(t, "conformance.md")
+	if b := blocks(raw); len(b) > 0 {
+		t.Errorf("conformance.md holds a fenced block %q; the form of the answer is under \"Your answer\"", b[0])
+	}
+	for _, bad := range []string{`{"`, `"deviation"`, `"amendment"`} {
+		if strings.Contains(raw, bad) {
+			t.Errorf("conformance.md holds %s, a piece of a JSON example", bad)
+		}
+	}
+	text := strings.Join(strings.Fields(raw), " ")
+	for _, want := range []string{"Your answer", "ygg.conformance/v1", "`deviation`", "`amendment`", "`blocked`"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("conformance.md does not mention %s", want)
 		}
 	}
 }

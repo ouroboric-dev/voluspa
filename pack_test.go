@@ -262,7 +262,7 @@ func TestTheGraphDeclaresEveryNodesTypes(t *testing.T) {
 	}{
 		"design":          {[]string{"brief", "decisions", "rejection", "date"}, "ygg.design/v1"},
 		"spec":            {[]string{"design", "decisions", "brief", "rejection", "refusal", "date"}, "ygg.spec/v1"},
-		"conformance":     {[]string{"spec", "design"}, "ygg.conformance/v1"},
+		"conformance":     {[]string{"spec", "design", "decisions"}, "ygg.conformance/v1"},
 		"plan":            {[]string{"spec", "design", "decisions", "rejection", "refusal", "date"}, "ygg.plan/v1"},
 		"reuse-review":    {[]string{"plan", "spec", "rejection"}, "ygg.reuse-review/v1"},
 		"implement":       {[]string{"task", "open_findings", "check_results", "rejection", "refusal"}, "ygg.implement/v1"},
