@@ -156,9 +156,10 @@ nodes:
         generated: [REPOS.md, .ygg/impact.json]
         timeout: 25m
         back_to: implement
-  # The grade stops the sandboxes and grades the product; the retrospective runs after it, reads the record (the grade as
-  # totals only), the ledger copy and the transcripts, and returns the retro. Its role, retrospective, is the operator's
-  # factory.yaml role, so the judge stays fixed across compared runs.
+  # The grade stops the sandboxes and grades the product; Odin skips it when factory.yaml has no grader. The
+  # retrospective runs after it, reads the record (the grade as totals only, if any), the ledger copy and the
+  # transcripts, and returns the retro. Its role, retrospective, is the operator's factory.yaml role, so the judge
+  # stays fixed across compared runs.
   - id: grade
     kind: grade
   - id: retro
