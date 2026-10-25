@@ -7,6 +7,8 @@ program, as the contract `ygg.conformance/v1`. It decides whether a person must 
 ## What to read
 
 - Your input `design`: the approved design. It is the authority.
+- Your input `decisions`: the owner's decisions, given at the design gate. They bind the spec as the design does. The
+  input may be empty: then the design is the only authority.
 - Your input `spec`: the spec to check, with the list of leaves it holds.
 
 ## What counts as a deviation
@@ -25,21 +27,25 @@ leaves; adding tests, validation and limits that make a design feature safe; tur
 design into a decision when the spec says so in its Decisions. If the spec's own section "Deviations from the
 design doc" lists something, it is still a deviation: report it.
 
-When in doubt, it is a deviation. A person can approve it in a minute; a missed one costs a build.
+The owner's decisions bind the spec as the design does. A spec that follows a decision, adds what a decision asks
+for, or settles an open question the way a decision answers it is not a deviation, even when the design lacks it. A
+spec that contradicts a decision is a deviation.
+
+For everything else: When in doubt, it is a deviation. A person can approve it in a minute; a missed one costs a build.
 
 ## What to write
 
-Your answer is one verdict. The fields are given in "Your answer" below. Hand it back with `submit`; the
-verdict is small, so no draft file is needed.
+Your answer is one verdict, in the form given under "Your answer" below, as the contract `ygg.conformance/v1`. Hand
+it back with `submit`; the verdict is small, so no draft file is needed.
 
-- No deviation: `{"deviation": false}`
-- A deviation: `{"deviation": true, "amendment": "<text>"}`
+- `deviation` is `false` when the spec stays inside the design and the decisions. Send no `amendment` then.
+- `deviation` is `true` when it does not. Then send an `amendment` as well.
 
 The amendment says, in plain sentences for a person who has the design open: what the spec does that the
 design does not say (or the reverse), where in the spec, and the two ways to settle it: change the design to
 include it, or change the spec to drop it. Keep it under 2,000 characters.
 
-If you cannot judge (an input is empty or unreadable), send `blocked` with the reason instead of a verdict. A
+If you cannot judge (the `spec` or the `design` is empty or unreadable), send `blocked` with its `reason` instead of a verdict. A
 person sees it. Do not read or write anything outside your workspace, and write no file.
 
 When you are done, answer with one sentence.

@@ -43,7 +43,7 @@ nodes:
     prompt: prompts/conformance.md
     scratch: true
     reviews: spec
-    input: [spec, design]
+    input: [spec, design, decisions]
     output: ygg.conformance/v1
     max_turns: 15
     # F2: the rehearsal's conformance reviewer ran out its 10-minute session on a ~62 KB review.
